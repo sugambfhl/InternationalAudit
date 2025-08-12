@@ -813,7 +813,7 @@ class ComputeRule:
             ("85652", "86141"),
         ]
 
-        df["_GROUP_KEY"] = df["PREAUTH_NUMBER"].where(df["PREAUTH_NUMBER"].notna(), df["CLAIM_NUMBER"])
+        df["_GROUP_KEY"] = df["PRE_AUTH_NUMBER"].where(df["PRE_AUTH_NUMBER"].notna(), df["CLAIM_NUMBER"])
 
         # Group by claim/preauth number
         for claim_id, group in df.groupby("_GROUP_KEY"):
@@ -986,7 +986,7 @@ class ComputeRule:
         ]
         inclusion_column: str = "ACTIVITY_CODE"
         extra_conditions: list[dict] = [
-            {"column": "PREAUTH_NUMBER", "condition": {"notna": True}},
+            {"column": "PRE_AUTH_NUMBER", "condition": {"notna": True}},
         ]
         df = self._compute_inclusion_exclusion(
             df=df,
@@ -1014,11 +1014,11 @@ class ComputeRule:
 
         # Ensure ACTIVITY_CODE is string
         df["ACTIVITY_CODE"] = df["ACTIVITY_CODE"].astype(str)
-        df["PREAUTH_NUMBER"] = df["PREAUTH_NUMBER"].astype(str).fillna("")
+        df["PRE_AUTH_NUMBER"] = df["PRE_AUTH_NUMBER"].astype(str).fillna("")
         df["CLAIM_NUMBER"] = df["CLAIM_NUMBER"].fillna("").astype(str)
 
         def group_key(row):
-            return row["PREAUTH_NUMBER"] if row["PREAUTH_NUMBER"] else f"CLAIM:{row['CLAIM_NUMBER']}"
+            return row["PRE_AUTH_NUMBER"] if row["PRE_AUTH_NUMBER"] else f"CLAIM:{row['CLAIM_NUMBER']}"
 
         df["_group_key"] = df.apply(group_key, axis=1)
 
