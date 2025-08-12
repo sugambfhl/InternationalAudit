@@ -52,13 +52,15 @@ class ComputeRule:
                 elif op == "lt" and isinstance(val, (int, float)):
                     mask &= df[col] < val
                 elif op == "eq":
-                    mask &= df[col].str == val
+                    mask &= df[col].astype(str) == str(val)
                 elif op == "neq":
-                    mask &= df[col].str != val
+                    mask &= df[col].astype(str) != str(val)
                 elif op == "isin" and isinstance(val, list):
                     mask &= df[col].isin(val)
                 elif op == "notin" and isinstance(val, list):
                     mask &= ~df[col].isin(val)
+                elif op == "notna":
+                    mask &= df[col].notna()
                 else:
                     logger.warning(f"Invalid operation detected: {op}")
                     mask &= False
@@ -770,4 +772,267 @@ class ComputeRule:
             trigger_name=trigger_name,
             extra_condition=extra_conditions,
         )
+        return df
+
+    @rule_method(active=True)
+    def glucosamine_quantity(self, df):
+        trigger_name: str = "Quantity more than 2"
+        inclusion: list[str] = [
+            "0000-000000-003857",
+            "0000-000000-001538",
+            "0000-000000-000937",
+            "0000-000000-001516",
+            "0000-000000-002250",
+            "1000-475401-0391",
+            "1553-529901-0061",
+            "0000-000000-003700",
+            "0000-000000-001528",
+            "0000-000000-002628",
+            "0000-000000-003843",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        extra_conditions: list[dict] = [
+            {"column": "ACTIVITY_QUANTITY_APPROVED", "condition": {"gt": 2}},
+        ]
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_conditions,
+        )
+        return df
+
+    @rule_method(active=True)
+    def apply_crp_esr_rule(self, df):
+        trigger_name = "CRP & ESR in Same claim / pre-auth"
+        code_pairs = [
+            ("85651", "86140"),
+            ("85651", "86141"),
+            ("85652", "86140"),
+            ("85652", "86141"),
+        ]
+
+        df["_GROUP_KEY"] = df["PREAUTH_NUMBER"].where(df["PREAUTH_NUMBER"].notna(), df["CLAIM_NUMBER"])
+
+        # Group by claim/preauth number
+        for claim_id, group in df.groupby("_GROUP_KEY"):
+            activity_codes = set(group["ACTIVITY_CODE"].astype(str))
+
+            # If any pair is fully present in this claim
+            for code1, code2 in code_pairs:
+                if code1 in activity_codes and code2 in activity_codes:
+                    mask = (df["_GROUP_KEY"] == claim_id) & (
+                        df["ACTIVITY_CODE"].astype(str).isin([code1, code2])
+                    )
+                    df.loc[mask, "Filter Applied"] = df.loc[mask, "Filter Applied"].apply(
+                        lambda x: [trigger_name] if not isinstance(x, list) else x + [trigger_name]
+                    )
+                    break
+                break  # No need to check other pairs for this claim
+        df.drop(columns="_GROUP_KEY", inplace=True)
+        return df
+
+
+    @rule_method(active=True)
+    def general_exclusion_probiotic(self, df):
+        trigger_name: str = "General Exclusion-Probiotics"
+        inclusion: list[str] = [
+            "0000-000000-000683",
+            "0000-000000-001315",
+            "2845-133702-2401-B",
+            "0170-502203-4021",
+            "0000-000000-000682",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def not_payable_ondansetron(self, df):
+        trigger_name: str = "Drug not payable - Ondansetron"
+        inclusion: list[str] = [
+            "0000-000000-003766",
+            "0000-000000-002029",
+            "0000-000000-003721",
+            "0000-000000-002030",
+            "0000-000000-003394",
+            "0000-000000-003395",
+            "0000-000000-003209",
+            "0000-000000-003211",
+            "0000-000000-003210",
+            "0000-000000-003212",
+            "6639-627604-1161",
+            "0000-000000-001584",
+            "0000-000000-001586",
+            "0006-238802-1172-1",
+            "0006-238802-1172-2",
+            "0006-238803-1171",
+            "0006-238803-1171-A",
+            "0063-238801-0511",
+            "0006-238804-2481",
+            "0006-238802-1173",
+            "0050-238802-1171",
+            "0063-238801-0511-A",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def not_payable_semaglutide(self, df):
+        trigger_name: str = "WEGOVY - Not Payable"
+        inclusion: list[str] = [
+            "0000-000000-003378",
+            "0000-000000-003379",
+            "0000-000000-003380",
+            "0000-000000-003423",
+            "0000-000000-003381",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def diabetic_semaglutide(self, df):
+        trigger_name: str = "OZEMPIC - To verify DM history and approve"
+        inclusion: list[str] = [
+            "4788-782701-1021",
+            "4788-782701-1023",
+            "4788-782701-1025",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def biopsy_pa_available(self, df):
+        trigger_name: str = "Service not payable without Preauth"
+        inclusion: list[str] = [
+            "11101",
+            "11102",
+            "11103",
+            "11104",
+            "11105",
+            "11106",
+            "11107",
+            "19081",
+            "19082",
+            "19083",
+            "19084",
+            "19085",
+            "19086",
+            "19100",
+            "19101",
+            "19102",
+            "19103",
+            "47000",
+            "47001",
+            "47100",
+            "32400",
+            "32402",
+            "32405",
+            "32408",
+            "32607",
+            "32608",
+            "32609",
+            "32096",
+            "32097",
+            "32098",
+            "55700",
+            "55705",
+            "55706",
+            "50200",
+            "50205",
+            "43239",
+            "45380",
+            "44389",
+            "20220",
+            "20225",
+            "20240",
+            "20245",
+            "20250",
+            "20251",
+            "38220",
+            "38221",
+            "38222",
+            "38500",
+            "38505",
+            "38510",
+            "38520",
+            "38525",
+            "38530",
+            "38531",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+        extra_conditions: list[dict] = [
+            {"column": "PREAUTH_NUMBER", "condition": {"notna": True}},
+        ]
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+            extra_condition=extra_conditions,
+        )
+        return df
+
+    @rule_method(active=True)
+    def beta_hcg_urine_pregnancy(self, df):
+        """
+        Rule: Return only rows where both Beta HCG and Urine Pregnancy Test
+        are present in the same claim/pre-auth number.
+        """
+        trigger_name: str = "Beta HCG + Urine Pregnancy Test"
+
+        # Code pairs to check
+        code_pairs = [
+            ("84702", "81025"),
+            ("84703", "81025"),
+            ("84704", "81025"),
+        ]
+
+        # Ensure ACTIVITY_CODE is string
+        df["ACTIVITY_CODE"] = df["ACTIVITY_CODE"].astype(str)
+        df["PREAUTH_NUMBER"] = df["PREAUTH_NUMBER"].astype(str).fillna("")
+        df["CLAIM_NUMBER"] = df["CLAIM_NUMBER"].fillna("").astype(str)
+
+        def group_key(row):
+            return row["PREAUTH_NUMBER"] if row["PREAUTH_NUMBER"] else f"CLAIM:{row['CLAIM_NUMBER']}"
+
+        df["_group_key"] = df.apply(group_key, axis=1)
+
+        # Identify matching claim/pre-auth numbers
+        for key, group in df.groupby("_group_key"):
+            activity_codes = set(group["ACTIVITY_CODE"])
+            for code1, code2 in code_pairs:
+                if code1 in activity_codes and code2 in activity_codes:
+                    mask = (df["_group_key"] == key) & (df["ACTIVITY_CODE"].isin([code1, code2]))
+                    df.loc[mask, "Filter Applied"] = df.loc[mask, "Filter Applied"].apply(
+                        lambda x: [trigger_name] if not isinstance(x, list) else x + [trigger_name]
+                    )
+                    break  # Stop checking other pairs once matched
+
+        df.drop(columns=["_group_key"], inplace=True)
+
         return df
