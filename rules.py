@@ -1,5 +1,4 @@
 import functools
-import keyword
 
 import pandas as pd
 from loguru import logger
