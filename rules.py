@@ -1099,3 +1099,173 @@ class ComputeRule:
         df.drop(columns=["_group_key"], inplace=True)
 
         return df
+
+    @rule_method(active=True)
+    def capsaicin_belladona_non_payable(self, df):
+        trigger_name: str = "Capsaicin / Belladona - Not Payable"
+
+        codes = ["C9268", "J7335", "J7336"]
+        code_mask = df["ACTIVITY_CODE"].isin(codes)
+
+        description = ["Capidol patch", "Capsicum Plaster"]
+        description_mask = df["ACTIVITY_INTERNAL_DESCRIPTION"].astype(str).str.contains("|".join(description), case = False, na = False)
+
+        df["_capsaicin_belladona"] = code_mask | description_mask
+
+        extra_conditions: list[dict] = [
+            {"column": "_capsaicin_belladona", "condition": {"eq": True}},
+        ]
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            extra_condition=extra_conditions,
+        )
+
+        df.drop(columns = ["_capsaicin_belladona"])
+        return df
+
+    @rule_method(active=True)
+    def heatpad_non_payable(self, df):
+        trigger_name: str = "Heat Pad - Not Payable"
+
+        inclusion: list[str] = [
+            "97010",
+            "A9273",
+            "E0210",
+            "E0215",
+            "E0217",
+            "E0221",
+            "E0238",
+            "E0490",
+            "A4639"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def steam_inhaler_non_payable(self, df):
+        trigger_name: str = "Steam Inhaler - Not Payable"
+
+        inclusion: list[str] = [
+            "94640",
+            "94644",
+            "J3535",
+            "S8100",
+            "S8101",
+            "A4627"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def hot_water_bag_non_payable(self, df):
+        trigger_name: str = "Hot Water Bag - Not Payable"
+
+        inclusion: list[str] = [
+            "97010",
+            "E0220",
+            "A9273"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def pillows_non_payable(self, df):
+        trigger_name: str = "Pillows - Not Payable"
+
+        inclusion: list[str] = [
+            "E0190"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def antiseptics_non_payable(self, df):
+        trigger_name: str = "Antispetics - Not Payable"
+
+        inclusion: list[str] = [
+            "A4674",
+            "0000-000000-000127",
+            "A4248",
+            "6030F"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def diapers_non_payable(self, df):
+        trigger_name: str = "Diapers - Not Payable"
+
+        inclusion: list[str] = [
+            "T4543",
+            "T4521",
+            "T4522",
+            "T4523",
+            "T4524",
+            "T4529",
+            "T4530",
+            "T4538",
+            "T4539",
+            "A4520"
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
+
+    @rule_method(active=True)
+    def moisturizer_non_payable(self, df):
+        trigger_name: str = "Moisturizer - Not Payable"
+
+        inclusion: list[str] = [
+            "A6250",
+        ]
+        inclusion_column: str = "ACTIVITY_CODE"
+
+        df = self._compute_inclusion_exclusion(
+            df=df,
+            trigger_name=trigger_name,
+            inclusion=inclusion,
+            inclusion_column=inclusion_column,
+        )
+        return df
